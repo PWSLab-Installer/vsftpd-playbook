@@ -1,0 +1,42 @@
+- hosts: localhost
+  connection: local
+  vars:
+    vsftpd_users:
+       - username: pwslab_ftp
+         name: FTP User
+         password: "{{ 'pwslab_admin' | password_hash('sha256', 'mysecretsalt') }}"
+    vsftpd_config:
+      listen_port: 990
+      local_enable: YES
+      write_enable: YES
+      chroot_local_user: YES
+      xferlog_enable: YES
+      log_ftp_protocol: YES
+      allow_writeable_chroot: YES
+  tasks:
+    
+    -   name: Check the version of release
+        command: hostnamectl
+        register: os_check
+        ignore_errors: yes
+    
+    -   name: Install Role VSFTPD
+        local_action: command ansible-galaxy install -f weareinteractive.vsftpd
+
+    -   name: Applying role VSFTPD
+        command: mv ~/.ansible/roles/weareinteractive.vsftpd ~/.ansible/roles/pwslab.vsftpd
+        ignore_errors: yes
+
+    -   name: Installing VSFTPD - Ubuntu
+        include_role:
+          name: pwslab.vsftpd
+        when:
+            - os_check.stdout | regex_search("Ubuntu")
+    
+    -   name: Installing VSFTPD - CentOS
+        include_role:
+          name: pwslab.vsftpd
+        vars:
+          vsftpd_enable_ssl: false
+        when:
+            - os_check.stdout | regex_search("CentOS")
